@@ -1,0 +1,11 @@
+# small set of runtime deps; llama-cpp-python will be installed from
+# abetlen extra index that hosts manylinux wheels (glibc) where available.
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+llama-cpp-python==0.3.16
+
+fastapi==0.116.1
+uvicorn[standard]==0.21.1
+gradio==5.43.1
+gunicorn==20.1.0
+huggingface-hub>=0.13.0
+python-multipart==0.0.6
