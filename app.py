@@ -343,15 +343,18 @@ def choose_start_port(preferred: int = DEFAULT_PORT, attempts: int = 50) -> int:
 
 # If module is launched directly, start the Gradio demo (for Spaces/testing).
 if __name__ == "__main__":
-    start_port = choose_start_port(DEFAULT_PORT, attempts=20)
+    # --- replace or update DEFAULT_PORT calculation near top of app.py ---
+# prefer the platform PORT env var (Render/Heroku style); fallback to others
+DEFAULT_PORT = int(os.environ.get("PORT") or os.environ.get("HF_PORT") or os.environ.get("GRADIO_SERVER_PORT") or 7861)
+
+# --- replace the bottom "if __name__ == '__main__':" block with this ---
+if __name__ == "__main__":
+    start_port = DEFAULT_PORT
     logger.info("Starting service. Gradio available=%s. Using port %d", GRADIO_AVAILABLE, start_port)
 
-    # If Gradio available, launch both FastAPI and Gradio in the same process by launching Gradio's interface only,
-    # since Gradio includes a small server and we mounted FastAPI endpoints above - in production you might
-    # run FastAPI separately with uvicorn and Gradio in dev only.
+    # If Gradio available and you want a dev/test UI *only* (not recommended for production):
     if GRADIO_AVAILABLE and demo is not None:
         try:
-            # prevent_thread_lock allows run in the same process where appropriate
             demo.launch(
                 server_name="0.0.0.0",
                 server_port=start_port,
@@ -359,11 +362,36 @@ if __name__ == "__main__":
                 prevent_thread_lock=True
             )
         except Exception as e:
-            logger.exception("Failed to launch Gradio: %s", e)
-            logger.info("Falling back to starting FastAPI via uvicorn")
+            logger.exception("Failed to launch Gradio: %s. Falling back to uvicorn", e)
             import uvicorn
             uvicorn.run("app:app", host="0.0.0.0", port=start_port, log_level="info")
     else:
-        # No gradio: run FastAPI only
+        # production path: run FastAPI via uvicorn
+        import uvicorn
+        uvicorn.run("app:app", host="0.0.0.0", port=start_port, log_level="info")
+# --- replace or update DEFAULT_PORT calculation near top of app.py ---
+# prefer the platform PORT env var (Render/Heroku style); fallback to others
+DEFAULT_PORT = int(os.environ.get("PORT") or os.environ.get("HF_PORT") or os.environ.get("GRADIO_SERVER_PORT") or 7861)
+
+# --- replace the bottom "if __name__ == '__main__':" block with this ---
+if __name__ == "__main__":
+    start_port = DEFAULT_PORT
+    logger.info("Starting service. Gradio available=%s. Using port %d", GRADIO_AVAILABLE, start_port)
+
+    # If Gradio available and you want a dev/test UI *only* (not recommended for production):
+    if GRADIO_AVAILABLE and demo is not None:
+        try:
+            demo.launch(
+                server_name="0.0.0.0",
+                server_port=start_port,
+                share=False,
+                prevent_thread_lock=True
+            )
+        except Exception as e:
+            logger.exception("Failed to launch Gradio: %s. Falling back to uvicorn", e)
+            import uvicorn
+            uvicorn.run("app:app", host="0.0.0.0", port=start_port, log_level="info")
+    else:
+        # production path: run FastAPI via uvicorn
         import uvicorn
         uvicorn.run("app:app", host="0.0.0.0", port=start_port, log_level="info")
